@@ -25,8 +25,6 @@ void StairsLighting::begin()
     setStandbyLight(true);
 }
 
-uint32_t last = 0;
-
 void StairsLighting::update()
 {
     _sonarLower.update();
@@ -39,7 +37,6 @@ void StairsLighting::update()
     updateSensors();
     
     uint32_t now = millis();
-
     uint32_t stateChangetimeDiff = now - _lastLightReadyTime;
     
     if (state == LIGHT_ON && stateChangetimeDiff > LIGHT_STAY_TIME_MS)

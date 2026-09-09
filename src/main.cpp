@@ -16,12 +16,12 @@ void setup()
 
     PCMSK0 |= (1 << PCINT5);
     PCMSK1 |= (1 << PCINT8);
-    Serial.println("Test");
 }
 
 void loop()
 {
     stairsLighting.update();
+    Serial.println("Test");
 }
 
 ISR(PCINT0_vect)

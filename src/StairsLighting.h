@@ -1,0 +1,69 @@
+#pragma once
+
+#include <stdint.h>
+
+#include "StairPwm.h"
+#include "effect/Effect.h"
+#include "AsyncUltrasonic.h"
+
+class StairsLighting
+{
+public:
+    enum Direction : uint8_t
+    {
+        DIRECTION_NONE,
+        DIRECTION_UP,
+        DIRECTION_DOWN
+    };
+
+private:
+    enum State : uint8_t
+    {
+        LIGHT_ON,
+        LIGHT_OFF,
+        LIGHT_EFFECT_IN,
+        LIGHT_EFFECT_OUT
+    };
+
+    StairPWM _pwm;
+
+    AsyncUltrasonic &_sonarLower;
+    AsyncUltrasonic &_sonarUpper;
+
+    Effect _effect;
+    Direction direction = DIRECTION_NONE;
+    State state = LIGHT_OFF;
+
+    bool _standbyLightEnabled = false;
+    uint8_t _standbyLightBrightness = 50;
+
+    uint32_t _lastLightReadyTime = 0;
+    uint32_t _lastMeasureTime = 0;
+    uint8_t _sensorIndex = 0;
+
+    static constexpr uint32_t MEASURE_INTERVAL_MS = 60;
+    static constexpr uint16_t DETECTION_THRESHOLD_CM = 40;
+    static constexpr uint16_t LIGHT_STAY_TIME_MS = 15000;
+    static constexpr uint16_t LIGHT_UP_INTERVAL_MS = 15000;
+
+    static const uint8_t LED_PINS[STAIRS_PWM_CHANNELS];
+
+    void updateSensors();
+
+public:
+    StairsLighting(
+        AsyncUltrasonic &lower,
+        AsyncUltrasonic &upper);
+
+    void begin();
+    void update();
+
+    void setStandbyLight(bool enabled);
+    void setStandbyLightBrightness(uint8_t brightness);
+
+    Direction readDirection();
+    bool isDark();
+
+    void lightOff();
+    void lightOn(Direction dir);
+};

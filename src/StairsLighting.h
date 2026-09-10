@@ -25,8 +25,6 @@ private:
         LIGHT_EFFECT_OUT
     };
 
-    StairPWM _pwm;
-
     AsyncUltrasonic &_sonarLower;
     AsyncUltrasonic &_sonarUpper;
 
@@ -45,8 +43,6 @@ private:
     static constexpr uint16_t DETECTION_THRESHOLD_CM = 40;
     static constexpr uint16_t LIGHT_STAY_TIME_MS = 15000;
     static constexpr uint16_t LIGHT_UP_INTERVAL_MS = 15000;
-
-    static const uint8_t LED_PINS[STAIRS_PWM_CHANNELS];
 
     void updateSensors();
 

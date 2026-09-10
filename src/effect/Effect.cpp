@@ -1,7 +1,8 @@
 #include "Effect.h"
+#include "StairPWM.h"
 
-Effect::Effect(StairPWM &pwm, uint8_t count)
-    : pwm(pwm), count(count) {}
+Effect::Effect(uint8_t count)
+    : count(count) {}
 
 void Effect::start(EffectFunction fn)
 {
@@ -15,7 +16,7 @@ void Effect::stop()
     running = false;
 
     for (uint8_t i = 0; i < count; i++)
-        pwm.set(i, 0);
+        StairPWM::getInstance().set(i, 0);
 }
 
 void Effect::update(int8_t direction, bool isLightUp)
@@ -37,7 +38,7 @@ void Effect::update(int8_t direction, bool isLightUp)
     for (uint8_t stepIdx = 0; stepIdx < count; stepIdx++)
     {
         ctx.stepIdx = stepIdx;
-        pwm.set(stepIdx, function(ctx));
+        StairPWM::getInstance().set(stepIdx, function(ctx));
     }
 }
 

@@ -1,11 +1,25 @@
 #include "StairPWM.h"
 
-void StairPWM::begin(const uint8_t *pins)   
+void StairPWM::begin(const uint8_t *pins)
 {
     for (uint8_t i = 0; i < STAIRS_PWM_CHANNELS; i++)
+    {
         channels[i].begin(pins[i]);
+    }
 
-    lastTick = micros();
+    cli();
+
+    TCCR2A = 0;
+    TCCR2B = 0;
+    TCNT2 = 0;
+    TCCR2A |= (1 << WGM21);
+    TCCR2B |= (1 << CS21);
+    OCR2A = 127;
+
+    TIFR2 |= (1 << OCF2A);
+    TIMSK2 |= (1 << OCIE2A);
+
+    sei();
 }
 
 void StairPWM::set(uint8_t channel, uint8_t brightness)
@@ -24,17 +38,7 @@ uint8_t StairPWM::get(uint8_t channel) const
     return channels[channel].get();
 }
 
-void StairPWM::update()
+void StairPWM::update(uint8_t channel, uint8_t phase)
 {
-    uint32_t now = micros();
-
-    if ((uint16_t)(now - lastTick) < PWM_TICK_US)
-        return;
-
-    lastTick += PWM_TICK_US;
-
-    phase++;
-
-    for (uint8_t i = 0; i < STAIRS_PWM_CHANNELS; i++)
-        channels[i].softwareUpdate(phase);
+    channels[channel].update(phase);
 }

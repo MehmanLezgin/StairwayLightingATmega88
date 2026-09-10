@@ -7,8 +7,6 @@ class PwmPin {
 private:
     uint8_t pin;
     uint8_t brightness;
-    bool hardware;
-
     volatile uint8_t* outReg;
     uint8_t mask;
 
@@ -19,5 +17,5 @@ public:
 
     uint8_t get() const;
 
-    void softwareUpdate(uint8_t phase);
+    void update(uint8_t phase);
 };

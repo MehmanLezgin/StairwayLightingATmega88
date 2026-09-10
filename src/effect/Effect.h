@@ -58,7 +58,6 @@ public:
     using EffectFunction = uint8_t (*)(Effect::Context& ctx);
 
 private:
-    StairPWM &pwm;
     EffectFunction function;
 
     uint8_t count;
@@ -66,7 +65,7 @@ private:
     bool running = false;
 
 public:
-    Effect(StairPWM &pwm, uint8_t count);
+    Effect(uint8_t count);
     void start(EffectFunction fn);
     void stop();
     void update(int8_t direction, bool isLightUp);

@@ -1,58 +1,69 @@
 #include "StairsLighting.h"
 #include "effect/func/fade.h"
+#include "StairPWM.h"
 
-const uint8_t StairsLighting::LED_PINS[STAIRS_PWM_CHANNELS] =
-    {
-        4, 3, 2, A5, A4, A3, A2, A1,
-        5, 6, 7, 8, 9, 10, 11, 12};
+#define EFFECT Effects::cozyBreathing
+
 
 StairsLighting::StairsLighting(
     AsyncUltrasonic &lower,
     AsyncUltrasonic &upper)
     : _sonarLower(lower),
       _sonarUpper(upper),
-      _effect(_pwm, STAIRS_PWM_CHANNELS)
+      _effect(STAIRS_PWM_CHANNELS)
 {
 }
 
 void StairsLighting::begin()
 {
-    _pwm.begin(LED_PINS);
-
     _sonarLower.begin();
     _sonarUpper.begin();
 
     setStandbyLight(true);
+
+    lightOn(DIRECTION_UP);
 }
+
+uint8_t j = 0;
+uint32_t last = 0;
 
 void StairsLighting::update()
 {
+    uint32_t now = millis();
+
+    // if (now - last > 30)
+    // {
+    //     last = now;
+    //     for (uint8_t i = 0; i < 16; i++)
+    //     {
+    //         StairPWM::getInstance().set(i, j);
+    //     }
+    //     j++;
+    // }
     _sonarLower.update();
     _sonarUpper.update();
     const bool isLightOut = state == LIGHT_EFFECT_OUT;
-    _pwm.update();
-    const int8_t dir = direction == DIRECTION_DOWN ? -1: dir == DIRECTION_UP ? +1 : 0;
+    const int8_t dir = direction == DIRECTION_DOWN ? -1 : dir == DIRECTION_UP ? +1
+                                                                              : 0;
     _effect.update(dir, isLightOut);
-    
     updateSensors();
-    
-    uint32_t now = millis();
+
     uint32_t stateChangetimeDiff = now - _lastLightReadyTime;
-    
+
     if (state == LIGHT_ON && stateChangetimeDiff > LIGHT_STAY_TIME_MS)
     {
         lightOff();
         return;
     }
-    
+
     const Direction direction = readDirection();
 
-    if (state == LIGHT_OFF && direction != DIRECTION_NONE)// && stateChangetimeDiff >= LIGHT_UP_INTERVAL_MS)
+    if (state == LIGHT_OFF && direction != DIRECTION_NONE) // && stateChangetimeDiff >= LIGHT_UP_INTERVAL_MS)
     {
         lightOn(direction);
         return;
     }
-    
+
     if (!_effect.isRunning())
     {
         state = state == LIGHT_EFFECT_IN ? LIGHT_ON : LIGHT_OFF;
@@ -88,7 +99,6 @@ StairsLighting::Direction StairsLighting::readDirection()
         lower &&
         lower < DETECTION_THRESHOLD_CM)
     {
-        Serial.println("Dir up");
         return DIRECTION_UP;
     }
 
@@ -98,7 +108,6 @@ StairsLighting::Direction StairsLighting::readDirection()
         upper &&
         upper < DETECTION_THRESHOLD_CM)
     {
-        Serial.println("Dir down");
         return DIRECTION_DOWN;
     }
 
@@ -124,14 +133,12 @@ void StairsLighting::lightOff()
 {
     direction = DIRECTION_NONE;
     state = LIGHT_EFFECT_OUT;
-    _effect.start(Effects::fade);
-    Serial.println("Light off...");
+    _effect.start(EFFECT);
 }
 
 void StairsLighting::lightOn(Direction dir)
 {
     direction = dir;
     state = LIGHT_EFFECT_IN;
-    _effect.start(Effects::fade);
-    Serial.println("Light up...");
+    _effect.start(EFFECT);
 }

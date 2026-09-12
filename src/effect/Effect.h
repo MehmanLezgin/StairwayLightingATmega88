@@ -52,10 +52,12 @@ public:
         uint32_t dt;
         uint8_t stepIdx;
         int8_t dir;
+        PWM_INT maxBrightness;
         bool isLightOut;
+        PWM_INT currentValue;
     };
 
-    using EffectFunction = uint8_t (*)(Effect::Context& ctx);
+    using EffectFunction = PWM_INT (*)(Effect::Context& ctx);
 
 private:
     EffectFunction function;

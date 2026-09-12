@@ -1,20 +1,21 @@
 #pragma once
 
-#include "PwmPin.h"
 #include <stdint.h>
 
-#ifndef STAIRS_PWM_CHANNELS
-#define STAIRS_PWM_CHANNELS 16
-#endif
+#define STAIRS_PWM_CHANNELS 16u
+#define PWM_MAX_VALUE 100u
+
+typedef uint8_t PWM_INT;
 
 class StairPWM
 {
 private:
-    PwmPin channels[STAIRS_PWM_CHANNELS];
-
-    uint8_t phase = 0;
-    uint32_t lastTick = 0;
-
+    PWM_INT pwmValues[STAIRS_PWM_CHANNELS] = {
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0
+    };
 public:
     static StairPWM &getInstance()
     {
@@ -22,11 +23,11 @@ public:
         return instance;
     }
 
-    void begin(const uint8_t *pins);
+    void begin();
 
-    void set(uint8_t channel, uint8_t brightness);
+    void set(uint8_t channel, PWM_INT brightness);
 
-    uint8_t get(uint8_t channel) const;
+    PWM_INT get(uint8_t channel) const;
 
     void update(uint8_t channel, uint8_t phase);
 };

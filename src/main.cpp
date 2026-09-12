@@ -1,22 +1,41 @@
-#include "AsyncUltrasonic.h"
+#include "hardware/AsyncUltrasonic.h"
 #include "StairsLighting.h"
 #include "StairPWM.h"
+#include "hardware/Keyboard.h"
+#include "hardware/LdrSensor.h"
 
-AsyncUltrasonic sonarUpper(DDRB, PORTB, PINB, PB5);
-AsyncUltrasonic sonarLower(DDRC, PORTC, PINC, PC0);
+// #define __DEBUG__STAIRS__
 
-StairsLighting stairsLighting(sonarLower, sonarUpper);
+#define PIN_KEYBOARD A6
+#define PIN_LDR A7
+
+#define LDR_THRESHOLD 100
+
+AsyncUltrasonic sonarUpper(DDRC, PORTC, PINC, PC0);
+AsyncUltrasonic sonarLower(DDRB, PORTB, PINB, PB5);
+Keyboard keyboard(PIN_KEYBOARD);
+LdrSensor ldrSensor(PIN_LDR, LDR_THRESHOLD);
+
+StairsLighting stairsLighting(sonarLower, sonarUpper, keyboard, ldrSensor);
+
+#ifdef __DEBUG__STAIRS__
+const uint8_t LED_PINS[STAIRS_PWM_CHANNELS] =
+    {
+        2, 3, 4, 5, 6, 7, 8, 9,
+        10, 11, 12, A1, A2, A3, A4, A5};
+#else
 
 const uint8_t LED_PINS[STAIRS_PWM_CHANNELS] =
     {
         4, 3, 2, A5, A4, A3, A2, A1,
         5, 6, 7, 8, 9, 10, 11, 12};
+#endif
 
 void setup()
 {
     Serial.begin(9600);
 
-    StairPWM::getInstance().begin(LED_PINS);
+    StairPWM::getInstance().begin();
 
     stairsLighting.begin();
 
@@ -30,7 +49,7 @@ void loop()
     stairsLighting.update();
 }
 
-ISR(PCINT0_vect)
+ISR(PCINT1_vect)
 {
     const auto state = sonarUpper.getState();
 
@@ -41,7 +60,7 @@ ISR(PCINT0_vect)
     }
 }
 
-ISR(PCINT1_vect)
+ISR(PCINT0_vect)
 {
     const auto state = sonarLower.getState();
 
@@ -59,6 +78,7 @@ ISR(TIMER2_COMPA_vect)
 
     for (uint8_t i = 0; i < STAIRS_PWM_CHANNELS; i++)
     {
+        // Вызываем обновленный быстрый метод
         StairPWM::getInstance().update(i, phase);
     }
 }

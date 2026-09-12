@@ -45,7 +45,10 @@ void AsyncUltrasonic::update()
         nowUs - _triggerTime >= 10)
     {
         _port &= ~_mask;
+        
         _ddr &= ~_mask;
+
+        _port &= ~_mask;
 
         _state = WAITING_FOR_HIGH;
     }
@@ -57,6 +60,7 @@ void AsyncUltrasonic::update()
         _distance = 0;
     }
 }
+
 
 void AsyncUltrasonic::handleInterrupt()
 {

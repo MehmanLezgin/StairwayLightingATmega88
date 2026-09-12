@@ -2,14 +2,17 @@
 #include "effect/func/fade.h"
 #include "StairPWM.h"
 
-#define EFFECT Effects::cozyBreathing
-
+#define EFFECT Effects::fade1
 
 StairsLighting::StairsLighting(
     AsyncUltrasonic &lower,
-    AsyncUltrasonic &upper)
+    AsyncUltrasonic &upper,
+    Keyboard &keyboard,
+    LdrSensor &ldrSensor)
     : _sonarLower(lower),
       _sonarUpper(upper),
+      _keyboard(keyboard),
+      _ldrSensor(ldrSensor),
       _effect(STAIRS_PWM_CHANNELS)
 {
 }
@@ -18,56 +21,102 @@ void StairsLighting::begin()
 {
     _sonarLower.begin();
     _sonarUpper.begin();
-
     setStandbyLight(true);
-
-    lightOn(DIRECTION_UP);
 }
-
-uint8_t j = 0;
-uint32_t last = 0;
 
 void StairsLighting::update()
 {
+    _keyboard.update();
+
     uint32_t now = millis();
 
-    // if (now - last > 30)
-    // {
-    //     last = now;
-    //     for (uint8_t i = 0; i < 16; i++)
-    //     {
-    //         StairPWM::getInstance().set(i, j);
-    //     }
-    //     j++;
-    // }
-    _sonarLower.update();
-    _sonarUpper.update();
     const bool isLightOut = state == LIGHT_EFFECT_OUT;
-    const int8_t dir = direction == DIRECTION_DOWN ? -1 : dir == DIRECTION_UP ? +1
-                                                                              : 0;
-    _effect.update(dir, isLightOut);
-    updateSensors();
+    const int8_t dir = direction == DIRECTION_DOWN ? -1 : direction == DIRECTION_UP ? +1
+                                                                                    : 0;
 
+    bool isDark = _ldrSensor.isDark();
+
+    _effect.update(dir, isLightOut);
     uint32_t stateChangetimeDiff = now - _lastLightReadyTime;
 
-    if (state == LIGHT_ON && stateChangetimeDiff > LIGHT_STAY_TIME_MS)
+    if (state == LIGHT_OFF && !_effect.isRunning() && stateChangetimeDiff > 500)
     {
-        lightOff();
-        return;
+        static uint32_t lastStandbyTime = 0;
+        static uint16_t currentStandbyPwm = 0;
+
+        uint16_t targetStandbyPwm = (isDark && _standbyLightEnabled) ? _standbyLightBrightness : 0;
+
+        if (currentStandbyPwm != targetStandbyPwm)
+        {
+            if (now - lastStandbyTime >= 100)
+            {
+                lastStandbyTime = now;
+                if (currentStandbyPwm < targetStandbyPwm)
+                    currentStandbyPwm++;
+                else
+                    currentStandbyPwm--;
+            }
+        }
+
+        for (uint8_t i = 0; i < STAIRS_PWM_CHANNELS; i++)
+        {
+            if (i == 0 || i == 12)
+                StairPWM::getInstance().set(i, currentStandbyPwm);
+            else
+                StairPWM::getInstance().set(i, 0);
+        }
     }
 
-    const Direction direction = readDirection();
-
-    if (state == LIGHT_OFF && direction != DIRECTION_NONE) // && stateChangetimeDiff >= LIGHT_UP_INTERVAL_MS)
+    if (isDark && !_effect.isRunning())
     {
-        lightOn(direction);
-        return;
+        _sonarLower.update();
+        _sonarUpper.update();
+        updateSensors();
+    }
+
+    if (state == LIGHT_ON)
+    {
+        if (stateChangetimeDiff > LIGHT_STAY_TIME_MS)
+        {
+            lightOff();
+            return;
+        }
+    }
+
+    const Direction currentDir = readDirection();
+
+    if (currentDir != DIRECTION_NONE)
+    {
+        if (state == LIGHT_ON)
+        {
+            if (stateChangetimeDiff > (LIGHT_STAY_TIME_MS / 2))
+            {
+                _lastLightReadyTime = now;
+            }
+        }
+        else if (state == LIGHT_OFF)
+        {
+            if (isDark && stateChangetimeDiff >= LIGHT_UP_INTERVAL_MS)
+            {
+                lightOn(currentDir);
+                return;
+            }
+        }
     }
 
     if (!_effect.isRunning())
     {
-        state = state == LIGHT_EFFECT_IN ? LIGHT_ON : LIGHT_OFF;
-        _lastLightReadyTime = now;
+        if (state == LIGHT_EFFECT_IN)
+        {
+            state = LIGHT_ON;
+            _lastLightReadyTime = now;
+        }
+        else if (state == LIGHT_EFFECT_OUT)
+        {
+            state = LIGHT_OFF;
+            _lastLightReadyTime = now;
+            direction = DIRECTION_NONE;
+        }
     }
 }
 
@@ -78,8 +127,7 @@ void StairsLighting::updateSensors()
     if (now - _lastMeasureTime < MEASURE_INTERVAL_MS)
         return;
 
-    AsyncUltrasonic &sensor =
-        _sensorIndex ? _sonarLower : _sonarUpper;
+    AsyncUltrasonic &sensor = _sensorIndex ? _sonarLower : _sonarUpper;
 
     if (!sensor.isReady())
         return;
@@ -93,20 +141,24 @@ void StairsLighting::updateSensors()
 
 StairsLighting::Direction StairsLighting::readDirection()
 {
+    if (!_ldrSensor.isDark() || _effect.isRunning())
+        return DIRECTION_NONE;
+
+    if (_keyboard.isClicked(KEY_A))
+        return DIRECTION_UP;
+    else if (_keyboard.isClicked(KEY_B))
+        return DIRECTION_DOWN;
+
     const uint16_t lower = _sonarLower.getDistance();
 
-    if (_sonarLower.isReady() &&
-        lower &&
-        lower < DETECTION_THRESHOLD_CM)
+    if (_sonarLower.isReady() && lower && lower < DETECTION_THRESHOLD_CM)
     {
         return DIRECTION_UP;
     }
 
     const uint16_t upper = _sonarUpper.getDistance();
 
-    if (_sonarUpper.isReady() &&
-        upper &&
-        upper < DETECTION_THRESHOLD_CM)
+    if (_sonarUpper.isReady() && upper && upper < DETECTION_THRESHOLD_CM)
     {
         return DIRECTION_DOWN;
     }
@@ -124,14 +176,8 @@ void StairsLighting::setStandbyLightBrightness(uint8_t brightness)
     _standbyLightBrightness = brightness;
 }
 
-bool StairsLighting::isDark()
-{
-    return true;
-}
-
 void StairsLighting::lightOff()
 {
-    direction = DIRECTION_NONE;
     state = LIGHT_EFFECT_OUT;
     _effect.start(EFFECT);
 }

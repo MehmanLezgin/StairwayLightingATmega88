@@ -3,19 +3,22 @@
 
 #define PWM_TICK_US  16
 
+typedef uint8_t PWM_INT;
+
 class PwmPin {
 private:
     uint8_t pin;
-    uint8_t brightness;
+    uint16_t brightness;
     volatile uint8_t* outReg;
     uint8_t mask;
 
 public:
     void begin(uint8_t p);
 
-    void set(uint8_t value);
+    void set(PWM_INT value);
 
-    uint8_t get() const;
+    PWM_INT get() const;
 
     void update(uint8_t phase);
 };
+

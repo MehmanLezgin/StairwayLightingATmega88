@@ -1,5 +1,7 @@
 #include "Effect.h"
 #include "StairPWM.h"
+#include <Arduino.h>
+
 
 Effect::Effect(uint8_t count)
     : count(count) {}
@@ -31,13 +33,16 @@ void Effect::update(int8_t direction, bool isLightUp)
         .dt = dt,
         .stepIdx = 0,
         .dir = direction,
-        .isLightOut = isLightUp
+        .maxBrightness = 30,
+        .isLightOut = isLightUp,
+        .currentValue = 0
     };
 
 
     for (uint8_t stepIdx = 0; stepIdx < count; stepIdx++)
     {
         ctx.stepIdx = stepIdx;
+        ctx.currentValue = StairPWM::getInstance().get(stepIdx);
         StairPWM::getInstance().set(stepIdx, function(ctx));
     }
 }

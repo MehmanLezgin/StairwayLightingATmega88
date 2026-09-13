@@ -2,20 +2,25 @@
 
 #include <stdint.h>
 
+#ifdef __AVR_ATmega328P__ 
+#define __DEBUG__STAIRS__
+#endif
+
+#ifdef __DEBUG__STAIRS__
+#define STAIRS_PWM_CHANNELS 13u
+#else
 #define STAIRS_PWM_CHANNELS 16u
-#define PWM_MAX_VALUE 100u
+#endif
+
+#define PWM_MAX_VALUE 99u
+
 
 typedef uint8_t PWM_INT;
 
 class StairPWM
 {
 private:
-    PWM_INT pwmValues[STAIRS_PWM_CHANNELS] = {
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0,
-        0, 0, 0, 0
-    };
+    PWM_INT pwmValues[STAIRS_PWM_CHANNELS];
 public:
     static StairPWM &getInstance()
     {
@@ -28,6 +33,4 @@ public:
     void set(uint8_t channel, PWM_INT brightness);
 
     PWM_INT get(uint8_t channel) const;
-
-    void update(uint8_t channel, uint8_t phase);
 };

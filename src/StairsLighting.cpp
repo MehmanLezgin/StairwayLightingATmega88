@@ -19,6 +19,7 @@ StairsLighting::StairsLighting(
 
 void StairsLighting::begin()
 {
+    StairPWM::getInstance().begin();
     _sonarLower.begin();
     _sonarUpper.begin();
     setStandbyLight(true);
@@ -85,22 +86,16 @@ void StairsLighting::update()
 
     const Direction currentDir = readDirection();
 
-    if (currentDir != DIRECTION_NONE)
+    if (isDark && currentDir != DIRECTION_NONE)
     {
-        if (state == LIGHT_ON)
+        if (state == LIGHT_ON && stateChangetimeDiff > (LIGHT_STAY_TIME_MS / 2))
         {
-            if (stateChangetimeDiff > (LIGHT_STAY_TIME_MS / 2))
-            {
-                _lastLightReadyTime = now;
-            }
+            _lastLightReadyTime = now;
         }
-        else if (state == LIGHT_OFF)
+        else if (state == LIGHT_OFF && stateChangetimeDiff >= LIGHT_UP_INTERVAL_MS)
         {
-            if (isDark && stateChangetimeDiff >= LIGHT_UP_INTERVAL_MS)
-            {
-                lightOn(currentDir);
-                return;
-            }
+            lightOn(currentDir);
+            return;
         }
     }
 

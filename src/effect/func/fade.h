@@ -6,9 +6,9 @@ namespace Effects
 {
     PWM_INT fade1(Effect::Context &ctx)
     {
-        const uint8_t TOTAL_STEPS = 13;
-        const uint16_t FADE_DURATION = 3000;
-        const uint16_t STEP_DELAY = 500;
+        const uint8_t TOTAL_STEPS = STAIRS_PWM_CHANNELS;
+        const uint16_t FADE_DURATION = 5000;
+        const uint16_t STEP_DELAY = 300;
         const uint32_t TOTAL_EFFECT_DURATION = ((TOTAL_STEPS - 1) * STEP_DELAY) + FADE_DURATION;
 
         if (ctx.stepIdx >= TOTAL_STEPS)
@@ -62,7 +62,7 @@ namespace Effects
             finalValue = ctx.isLightOut ? 0 : ctx.maxBrightness;
         }
 
-        if (ctx.dt >= TOTAL_EFFECT_DURATION && ctx.stepIdx == 15)
+        if (ctx.dt >= TOTAL_EFFECT_DURATION && ctx.stepIdx == TOTAL_STEPS-1)
         {
             ctx.effect->finish();
         }

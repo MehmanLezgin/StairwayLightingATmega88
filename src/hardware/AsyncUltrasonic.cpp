@@ -31,6 +31,7 @@ bool AsyncUltrasonic::trigger()
     _triggerTime = micros();
     _lastActionTime = millis();
 
+    // OUTPUT HIGH
     _ddr |= _mask;
     _port |= _mask;
 
@@ -44,10 +45,11 @@ void AsyncUltrasonic::update()
     if (_state == TRIGGERING &&
         nowUs - _triggerTime >= 10)
     {
+        // LOW
         _port &= ~_mask;
-        
-        _ddr &= ~_mask;
 
+        // INPUT + внешний pull-down
+        _ddr &= ~_mask;
         _port &= ~_mask;
 
         _state = WAITING_FOR_HIGH;

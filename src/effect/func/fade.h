@@ -5,50 +5,80 @@
 namespace Effects
 {
     PWM_INT fade1(Effect::Context &ctx)
-{
-    const uint16_t STEP_DELAY = 500;
-    const uint8_t TOTAL_STEPS = STAIRS_PWM_CHANNELS;
-    const uint32_t TOTAL_EFFECT_DURATION = TOTAL_STEPS * STEP_DELAY;
-
-    // 1. Boundary & Finish evaluation
-    if (ctx.dt >= TOTAL_EFFECT_DURATION || ctx.stepIdx >= TOTAL_STEPS)
     {
-        if (ctx.dt >= TOTAL_EFFECT_DURATION) ctx.effect->finish();
-        return ctx.isLightOut ? 0 : ctx.maxBrightness;
-    }
+        // Adjust configuration settings here
+        const uint16_t STEP_DELAY = 500; // Delay between the start of consecutive stairs (smaller = tighter wave)
+        const uint16_t FADE_TIME = 1500; // How long a single stair takes to complete its individual fade
 
-    uint32_t stepStartTime = ctx.stepIdx * STEP_DELAY;
-    if (ctx.dt < stepStartTime)
-    {
-        return ctx.currentValue;
-    }
+        const uint8_t TOTAL_STEPS = STAIRS_PWM_CHANNELS;
 
-    // 2. Compute local timeframe bounded strictly [0 ... STEP_DELAY]
-    uint32_t localDt = ctx.dt - stepStartTime;
-    if (localDt > STEP_DELAY) localDt = STEP_DELAY;
+        // Total effect time handles the staggered starts + the final step's fade duration
+        const uint32_t TOTAL_EFFECT_DURATION = ((TOTAL_STEPS - 1) * STEP_DELAY) + FADE_TIME;
 
-    // 3. Establish structural target boundaries
-    PWM_INT targetValue = ctx.isLightOut ? 0 : ctx.maxBrightness;
-    
-    // Quick exit if already at the target
-    if (ctx.currentValue == targetValue) return targetValue;
+        // 1. Boundary & Finish evaluation
+        if (ctx.dt >= TOTAL_EFFECT_DURATION)
+        {
+            ctx.effect->finish();
+            return ctx.isLightOut ? 0 : ctx.maxBrightness;
+        }
 
-    // 4. Linear interpolation between ctx.currentValue and targetValue
-    if (ctx.isLightOut)
-    {
-        // Fade Out: Interpolate downwards from currentValue to 0
-        uint32_t delta = ctx.currentValue;
-        uint32_t progress = (localDt * delta) / STEP_DELAY;
-        return (progress >= delta) ? 0 : (delta - progress);
+        if (ctx.stepIdx >= TOTAL_STEPS)
+        {
+            return ctx.isLightOut ? 0 : ctx.maxBrightness;
+        }
+
+        // Determine the physical stair step based on running direction
+        uint8_t physicalStep = (ctx.dir == -1) ? (TOTAL_STEPS - 1 - ctx.stepIdx) : ctx.stepIdx;
+
+        // 2. Compute the start time for this specific step
+        uint32_t stepStartTime = physicalStep * STEP_DELAY;
+
+        if (ctx.dt < stepStartTime)
+        {
+            return ctx.currentValue; // Not started yet
+        }
+
+        // 3. Compute local time bounded strictly to the individual fade window [0 ... FADE_TIME]
+        uint32_t localDt = ctx.dt - stepStartTime;
+        if (localDt > FADE_TIME)
+            localDt = FADE_TIME;
+
+        // Quick exit if already past the individual fade window
+        PWM_INT targetValue = ctx.isLightOut ? 0 : ctx.maxBrightness;
+        if (localDt == FADE_TIME)
+            return targetValue;
+
+        // 4. Generate high-precision Cosine S-Curve interpolation factor (0 to 1000)
+        // Formula: progress = (1 - cos(pi * localDt / FADE_TIME)) / 2
+        // Uses integer math scaling to keep execution extremely fast and fluid
+        uint32_t angle = (localDt * 180) / FADE_TIME;
+
+        // Fast integer approximation of: (1.0f - cosf(angle_rad)) * 500.0f
+        // Yields an exceptionally smooth acceleration and deceleration profile
+        int32_t cosVal = 1000 - ((angle * angle * 2) / 65); // Basic Taylor series approach
+        if (cosVal < -1000)
+            cosVal = -1000;
+        if (cosVal > 1000)
+            cosVal = 1000;
+
+        uint32_t sCurveProgress = (1000 - cosVal) / 2; // Scaled [0 ... 1000]
+
+        // 5. Interpolate relative to current state using the smooth progression map
+        if (ctx.isLightOut)
+        {
+            // Fade Out: Ease down from currentValue to 0
+            uint32_t delta = ctx.currentValue;
+            uint32_t progressAmount = (sCurveProgress * delta) / 1000;
+            return (progressAmount >= delta) ? 0 : (delta - progressAmount);
+        }
+        else
+        {
+            // Fade In: Ease up from currentValue to maxBrightness
+            uint32_t delta = ctx.maxBrightness - ctx.currentValue;
+            uint32_t progressAmount = (sCurveProgress * delta) / 1000;
+            return ctx.currentValue + progressAmount;
+        }
     }
-    else
-    {
-        // Fade In: Interpolate upwards from currentValue to maxBrightness
-        uint32_t delta = ctx.maxBrightness - ctx.currentValue;
-        uint32_t progress = (localDt * delta) / STEP_DELAY;
-        return ctx.currentValue + progress;
-    }
-}
 
 }
 

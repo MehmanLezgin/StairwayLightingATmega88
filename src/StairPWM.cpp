@@ -51,10 +51,8 @@ uint8_t calcGamma8(uint16_t value, uint16_t maxBrightness)
 {
     if (maxBrightness == 0) return 0;
     
-    // 1. Square the input value relative to its native scale (Result max = maxBrightness^2)
     uint32_t gammaSquared = (uint32_t)value * value;
     
-    // 2. Divide by the current maxBrightness ceiling to scale it back down smoothly
     return gammaSquared / maxBrightness;
 }
 

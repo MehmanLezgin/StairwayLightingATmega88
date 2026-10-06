@@ -38,12 +38,24 @@ SOFTPWM_DEFINE_CHANNEL(15, DDRB, PORTB, PORTB4); // Pin 12
 
 SOFTPWM_DEFINE_OBJECT_WITH_PWM_LEVELS(STAIRS_PWM_CHANNELS, PWM_MAX_VALUE + 1);
 
-void StairPWM::begin()
+void StairPWM::begin(PWM_INT maxBrightness)
 {
     for (uint8_t i = 0; i < STAIRS_PWM_CHANNELS; i++)
         pwmValues[i] = 0;
 
+    setMaxBrightness(maxBrightness);
     Palatis::SoftPWM.begin(400);
+}
+
+uint8_t calcGamma8(uint16_t value, uint16_t maxBrightness)
+{
+    if (maxBrightness == 0) return 0;
+    
+    // 1. Square the input value relative to its native scale (Result max = maxBrightness^2)
+    uint32_t gammaSquared = (uint32_t)value * value;
+    
+    // 2. Divide by the current maxBrightness ceiling to scale it back down smoothly
+    return gammaSquared / maxBrightness;
 }
 
 void StairPWM::set(uint8_t channel, PWM_INT value)
@@ -52,7 +64,7 @@ void StairPWM::set(uint8_t channel, PWM_INT value)
         return;
 
     pwmValues[channel] = value;
-    Palatis::SoftPWM.set(channel, value);
+    Palatis::SoftPWM.set(channel, calcGamma8(value, StairPWM::getInstance().getMaxBrightness()));
 }
 
 PWM_INT StairPWM::get(uint8_t channel) const
@@ -61,4 +73,14 @@ PWM_INT StairPWM::get(uint8_t channel) const
         return 0;
 
     return pwmValues[channel];
+}
+
+void StairPWM::setMaxBrightness(PWM_INT brightness)
+{
+    _maxBrightness = brightness;
+}
+
+PWM_INT StairPWM::getMaxBrightness()
+{
+    return _maxBrightness;
 }

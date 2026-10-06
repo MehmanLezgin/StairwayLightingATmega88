@@ -5,70 +5,51 @@
 namespace Effects
 {
     PWM_INT fade1(Effect::Context &ctx)
+{
+    const uint16_t STEP_DELAY = 500;
+    const uint8_t TOTAL_STEPS = STAIRS_PWM_CHANNELS;
+    const uint32_t TOTAL_EFFECT_DURATION = TOTAL_STEPS * STEP_DELAY;
+
+    // 1. Boundary & Finish evaluation
+    if (ctx.dt >= TOTAL_EFFECT_DURATION || ctx.stepIdx >= TOTAL_STEPS)
     {
-        const uint8_t TOTAL_STEPS = STAIRS_PWM_CHANNELS;
-        const uint16_t FADE_DURATION = 5000;
-        const uint16_t STEP_DELAY = 300;
-        const uint32_t TOTAL_EFFECT_DURATION = ((TOTAL_STEPS - 1) * STEP_DELAY) + FADE_DURATION;
-
-        if (ctx.stepIdx >= TOTAL_STEPS)
-        {
-            if (ctx.dt >= TOTAL_EFFECT_DURATION && ctx.stepIdx == 15)
-            {
-                ctx.effect->finish();
-            }
-            return 0;
-        }
-
-        uint8_t physicalStep = ctx.stepIdx;
-        if (ctx.dir == -1)
-        {
-            physicalStep = TOTAL_STEPS - 1 - ctx.stepIdx;
-        }
-
-        uint32_t stepStartTime = physicalStep * STEP_DELAY;
-        PWM_INT finalValue = 0;
-
-        if (ctx.dt < stepStartTime)
-        {
-            finalValue = ctx.currentValue;
-        }
-        else if (ctx.dt >= stepStartTime && (ctx.dt - stepStartTime) < FADE_DURATION)
-        {
-            uint32_t localDt = ctx.dt - stepStartTime;
-            
-            if (ctx.isLightOut)
-            {
-                PWM_INT currentFadingStep = ((uint32_t)localDt * ctx.maxBrightness) / FADE_DURATION;
-                if (currentFadingStep >= ctx.maxBrightness) finalValue = 0;
-                else finalValue = ctx.maxBrightness - currentFadingStep;
-            }
-            else
-            {
-                PWM_INT startBrightness = ctx.currentValue;
-                if (startBrightness >= ctx.maxBrightness)
-                {
-                    finalValue = ctx.maxBrightness;
-                }
-                else
-                {
-                    PWM_INT remainingRange = ctx.maxBrightness - startBrightness;
-                    finalValue = startBrightness + (((uint32_t)localDt * remainingRange) / FADE_DURATION);
-                }
-            }
-        }
-        else
-        {
-            finalValue = ctx.isLightOut ? 0 : ctx.maxBrightness;
-        }
-
-        if (ctx.dt >= TOTAL_EFFECT_DURATION && ctx.stepIdx == TOTAL_STEPS-1)
-        {
-            ctx.effect->finish();
-        }
-
-        return finalValue;
+        if (ctx.dt >= TOTAL_EFFECT_DURATION) ctx.effect->finish();
+        return ctx.isLightOut ? 0 : ctx.maxBrightness;
     }
+
+    uint32_t stepStartTime = ctx.stepIdx * STEP_DELAY;
+    if (ctx.dt < stepStartTime)
+    {
+        return ctx.currentValue;
+    }
+
+    // 2. Compute local timeframe bounded strictly [0 ... STEP_DELAY]
+    uint32_t localDt = ctx.dt - stepStartTime;
+    if (localDt > STEP_DELAY) localDt = STEP_DELAY;
+
+    // 3. Establish structural target boundaries
+    PWM_INT targetValue = ctx.isLightOut ? 0 : ctx.maxBrightness;
+    
+    // Quick exit if already at the target
+    if (ctx.currentValue == targetValue) return targetValue;
+
+    // 4. Linear interpolation between ctx.currentValue and targetValue
+    if (ctx.isLightOut)
+    {
+        // Fade Out: Interpolate downwards from currentValue to 0
+        uint32_t delta = ctx.currentValue;
+        uint32_t progress = (localDt * delta) / STEP_DELAY;
+        return (progress >= delta) ? 0 : (delta - progress);
+    }
+    else
+    {
+        // Fade In: Interpolate upwards from currentValue to maxBrightness
+        uint32_t delta = ctx.maxBrightness - ctx.currentValue;
+        uint32_t progress = (localDt * delta) / STEP_DELAY;
+        return ctx.currentValue + progress;
+    }
+}
+
 }
 
 #define BREATH_MAX_BRIGHTNESS 100

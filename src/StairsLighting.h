@@ -37,14 +37,14 @@ private:
     State state = LIGHT_OFF;
 
     bool _standbyLightEnabled = false;
-    uint8_t _standbyLightBrightness = 1;
+    uint8_t _standbyLightBrightness = 12;
 
     uint32_t _lastLightReadyTime = 0;
     uint32_t _lastMeasureTime = 0;
     uint8_t _sensorIndex = 0;
 
     static constexpr uint32_t MEASURE_INTERVAL_MS = 100;
-    static constexpr uint16_t DETECTION_THRESHOLD_CM = 45;
+    static constexpr uint16_t DETECTION_THRESHOLD_CM = 60;
     static constexpr uint16_t LIGHT_STAY_TIME_MS = 10000;
     static constexpr uint16_t LIGHT_UP_INTERVAL_MS = 3000;
 

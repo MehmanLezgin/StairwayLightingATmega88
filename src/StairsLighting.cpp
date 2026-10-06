@@ -19,7 +19,7 @@ StairsLighting::StairsLighting(
 
 void StairsLighting::begin()
 {
-    StairPWM::getInstance().begin();
+    StairPWM::getInstance().begin(45);
     _sonarLower.begin();
     _sonarUpper.begin();
     setStandbyLight(true);
@@ -74,21 +74,19 @@ void StairsLighting::update()
         _sonarUpper.update();
         updateSensors();
     }
+    const Direction currentDir = readDirection();
 
-    if (state == LIGHT_ON)
+    if (currentDir == DIRECTION_NONE)
     {
-        if (stateChangetimeDiff > LIGHT_STAY_TIME_MS)
+        if (state == LIGHT_ON && stateChangetimeDiff > LIGHT_STAY_TIME_MS)
         {
             lightOff();
             return;
         }
     }
-
-    const Direction currentDir = readDirection();
-
-    if (isDark && currentDir != DIRECTION_NONE)
+    else if (isDark)
     {
-        if (state == LIGHT_ON && stateChangetimeDiff > (LIGHT_STAY_TIME_MS / 2))
+        if (state == LIGHT_ON && stateChangetimeDiff > LIGHT_STAY_TIME_MS / 2)
         {
             _lastLightReadyTime = now;
         }
@@ -139,9 +137,9 @@ StairsLighting::Direction StairsLighting::readDirection()
     if (!_ldrSensor.isDark() || _effect.isRunning())
         return DIRECTION_NONE;
 
-    if (_keyboard.isClicked(KEY_A))
+    if (_keyboard.isPressed(KEY_A))
         return DIRECTION_UP;
-    else if (_keyboard.isClicked(KEY_B))
+    else if (_keyboard.isPressed(KEY_B))
         return DIRECTION_DOWN;
 
     const uint16_t lower = _sonarLower.getDistance();

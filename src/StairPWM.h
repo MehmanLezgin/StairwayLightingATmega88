@@ -21,6 +21,7 @@ class StairPWM
 {
 private:
     PWM_INT pwmValues[STAIRS_PWM_CHANNELS];
+    PWM_INT _maxBrightness = 0xFF;
 public:
     static StairPWM &getInstance()
     {
@@ -28,9 +29,11 @@ public:
         return instance;
     }
 
-    void begin();
+    void begin(PWM_INT maxBrightness = 0xFF);
 
     void set(uint8_t channel, PWM_INT brightness);
+    void setMaxBrightness(PWM_INT brightness);
+    PWM_INT getMaxBrightness();
 
     PWM_INT get(uint8_t channel) const;
 };

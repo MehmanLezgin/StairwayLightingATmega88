@@ -33,7 +33,7 @@ void Effect::update(int8_t direction, bool isLightUp)
         .dt = dt,
         .stepIdx = 0,
         .dir = direction,
-        .maxBrightness = 30,
+        .maxBrightness = StairPWM::getInstance().getMaxBrightness(),
         .isLightOut = isLightUp,
         .currentValue = 0
     };

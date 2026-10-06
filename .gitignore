@@ -1,3 +1,4 @@
+.gitignore
 .pio/*
 !.pio/build/
 !.pio/build/ATmega88PA/

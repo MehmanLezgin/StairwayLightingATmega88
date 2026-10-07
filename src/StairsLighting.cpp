@@ -47,10 +47,10 @@ void StairsLighting::update()
 
 void StairsLighting::updateEffects(uint32_t now)
 {
-    const bool isLightOut = state == STATE_LIGHT_EFFECT_OUT;
+    const bool isLightOut = state == State::LIGHT_EFFECT_OUT;
 
     const int8_t dir =
-        direction == DIRECTION_DOWN ? -1 : direction == DIRECTION_UP ? 1
+        direction == Direction::DOWN ? -1 : direction == Direction::UP ? 1
                                                                      : 0;
 
     _effect.update(dir, isLightOut);
@@ -63,22 +63,22 @@ void StairsLighting::updateDayNightState(
     if (now - _lastLightReadyTime <= (LIGHT_UP_INTERVAL_MS >> 1))
         return;
 
-    if (state == STATE_LIGHT_OFF && isDark)
+    if (state == State::LIGHT_OFF && isDark)
         enterStandby(now);
-    else if (state == STATE_LIGHT_STANDBY && !isDark)
+    else if (state == State::LIGHT_STANDBY && !isDark)
         enterLightOff(now);
 }
 
 void StairsLighting::enterStandby(uint32_t now)
 {
-    state = STATE_LIGHT_STANDBY;
+    state = State::LIGHT_STANDBY;
     _lastLightReadyTime = now;
     _effect.start(STANDBY_EFFECT);
 }
 
 void StairsLighting::enterLightOff(uint32_t now)
 {
-    state = STATE_LIGHT_OFF;
+    state = State::LIGHT_OFF;
     _lastLightReadyTime = now;
     _effect.start(FADE_OUT_EFFECT);
 }
@@ -129,9 +129,9 @@ bool StairsLighting::handleLightState(
 {
     const uint32_t stateTime = now - _lastLightReadyTime;
 
-    if (dir == DIRECTION_NONE)
+    if (dir == Direction::NONE)
     {
-        if (state == STATE_LIGHT_ON &&
+        if (state == State::LIGHT_ON &&
             stateTime > LIGHT_STAY_TIME_MS)
         {
             lightOff();
@@ -144,7 +144,7 @@ bool StairsLighting::handleLightState(
     if (!isDark)
         return false;
 
-    if (state == STATE_LIGHT_ON &&
+    if (state == State::LIGHT_ON &&
         stateTime > LIGHT_STAY_TIME_MS / 2)
     {
         _lastLightReadyTime = now;
@@ -164,46 +164,46 @@ void StairsLighting::finishLightEffect(uint32_t now)
     if (isMainEffectRunning())
         return;
 
-    if (state == STATE_LIGHT_EFFECT_IN)
+    if (state == State::LIGHT_EFFECT_IN)
     {
-        state = STATE_LIGHT_ON;
+        state = State::LIGHT_ON;
         _lastLightReadyTime = now;
         return;
     }
 
-    if (state == STATE_LIGHT_EFFECT_OUT)
+    if (state == State::LIGHT_EFFECT_OUT)
     {
-        state = STATE_LIGHT_OFF;
+        state = State::LIGHT_OFF;
         _lastLightReadyTime = now;
-        direction = DIRECTION_NONE;
+        direction = Direction::NONE;
     }
 }
 
 StairsLighting::Direction StairsLighting::readDirection()
 {
     if (!_ldrSensor.isDark() || isMainEffectRunning())
-        return DIRECTION_NONE;
+        return Direction::NONE;
 
     if (_keyboard.isPressed(KEY_A))
-        return DIRECTION_UP;
+        return Direction::UP;
     else if (_keyboard.isPressed(KEY_B))
-        return DIRECTION_DOWN;
+        return Direction::DOWN;
 
     const uint16_t lower = _sonarLower.getDistance();
 
     if (_sonarLower.isReady() && lower && lower < DETECTION_THRESHOLD_CM)
     {
-        return DIRECTION_UP;
+        return Direction::UP;
     }
 
     const uint16_t upper = _sonarUpper.getDistance();
 
     if (_sonarUpper.isReady() && upper && upper < DETECTION_THRESHOLD_CM)
     {
-        return DIRECTION_DOWN;
+        return Direction::DOWN;
     }
 
-    return DIRECTION_NONE;
+    return Direction::NONE;
 }
 
 void StairsLighting::setStandbyLight(bool enabled)
@@ -218,20 +218,20 @@ void StairsLighting::setStandbyLightBrightness(uint8_t brightness)
 
 void StairsLighting::lightOff()
 {
-    state = STATE_LIGHT_EFFECT_OUT;
+    state = State::LIGHT_EFFECT_OUT;
     _effect.start(EFFECT);
 }
 
 void StairsLighting::lightOn(Direction dir)
 {
     direction = dir;
-    state = STATE_LIGHT_EFFECT_IN;
+    state = State::LIGHT_EFFECT_IN;
     _effect.start(EFFECT);
 }
 
 bool StairsLighting::isStandbyEffectRunning()
 {
-    return _effect.isRunning() && state == STATE_LIGHT_STANDBY;
+    return _effect.isRunning() && state == State::LIGHT_STANDBY;
 }
 
 bool StairsLighting::isMainEffectRunning()
@@ -241,5 +241,5 @@ bool StairsLighting::isMainEffectRunning()
 
 bool StairsLighting::isStandbyOrOff()
 {
-    return state == STATE_LIGHT_STANDBY || state == STATE_LIGHT_OFF;
+    return state == State::LIGHT_STANDBY || state == State::LIGHT_OFF;
 }

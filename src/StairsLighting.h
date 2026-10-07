@@ -17,21 +17,19 @@ enum class SensorPos
 class StairsLighting
 {
 public:
-    enum Direction : uint8_t
+    enum class Direction : uint8_t
     {
-        DIRECTION_NONE,
-        DIRECTION_UP,
-        DIRECTION_DOWN
+        NONE, UP, DOWN
     };
 
 private:
-    enum State : uint8_t
+    enum class State : uint8_t
     {
-        STATE_LIGHT_ON,
-        STATE_LIGHT_OFF,
-        STATE_LIGHT_EFFECT_IN,
-        STATE_LIGHT_EFFECT_OUT,
-        STATE_LIGHT_STANDBY
+        LIGHT_ON,
+        LIGHT_OFF,
+        LIGHT_EFFECT_IN,
+        LIGHT_EFFECT_OUT,
+        LIGHT_STANDBY
     };
 
     AsyncUltrasonic &_sonarLower;
@@ -40,8 +38,8 @@ private:
     LdrSensor &_ldrSensor;
 
     Effect _effect;
-    Direction direction = DIRECTION_NONE;
-    State state = STATE_LIGHT_OFF;
+    Direction direction = Direction::NONE;
+    State state = State::LIGHT_OFF;
 
     bool _standbyLightEnabled = false;
     uint8_t _standbyLightBrightness = 12;

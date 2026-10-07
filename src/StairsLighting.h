@@ -21,10 +21,11 @@ public:
 private:
     enum State : uint8_t
     {
-        LIGHT_ON,
-        LIGHT_OFF,
-        LIGHT_EFFECT_IN,
-        LIGHT_EFFECT_OUT
+        STATE_LIGHT_ON,
+        STATE_LIGHT_OFF,
+        STATE_LIGHT_EFFECT_IN,
+        STATE_LIGHT_EFFECT_OUT,
+        STATE_LIGHT_STANDBY
     };
 
     AsyncUltrasonic &_sonarLower;
@@ -34,7 +35,7 @@ private:
 
     Effect _effect;
     Direction direction = DIRECTION_NONE;
-    State state = LIGHT_OFF;
+    State state = STATE_LIGHT_OFF;
 
     bool _standbyLightEnabled = false;
     uint8_t _standbyLightBrightness = 12;
@@ -45,7 +46,7 @@ private:
 
     static constexpr uint32_t MEASURE_INTERVAL_MS = 100;
     static constexpr uint16_t DETECTION_THRESHOLD_CM = 60;
-    static constexpr uint16_t LIGHT_STAY_TIME_MS = 10000;
+    static constexpr uint16_t LIGHT_STAY_TIME_MS = 15000;
     static constexpr uint16_t LIGHT_UP_INTERVAL_MS = 3000;
 
     void updateSensors();
@@ -68,4 +69,7 @@ public:
 
     void lightOff();
     void lightOn(Direction dir);
+    bool isStandbyEffectRunning();
+    bool isMainEffectRunning();
+    bool isStandbyOrOff();
 };

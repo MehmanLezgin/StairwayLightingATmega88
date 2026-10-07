@@ -4,6 +4,28 @@
 
 namespace Effects
 {
+    PWM_INT simpleFadeOut(Effect::Context &ctx)
+    {
+        const uint16_t FADE_TIME = 1500;
+
+        if (ctx.dt >= FADE_TIME)
+        {
+            ctx.effect->finish();
+            return 0;
+        }
+
+        uint32_t progress = (ctx.dt * ctx.currentValue) / FADE_TIME;
+
+        if (progress >= ctx.currentValue)
+            return 0;
+
+        return ctx.currentValue - progress;
+    }
+
+}
+
+namespace Effects
+{
     PWM_INT fade1(Effect::Context &ctx)
     {
         // Adjust configuration settings here
@@ -82,17 +104,20 @@ namespace Effects
 
 }
 
-#define BREATH_MAX_BRIGHTNESS 100
-#define BREATH_MIN_BRIGHTNESS 8
-#define BREATH_CYCLE_DURATION 6000
+#define BREATH_MIN_BRIGHTNESS 13
+#define BREATH_CYCLE_DURATION 7000
 #define BREATH_FADE_OUT_MS 60
 
 namespace Effects
 {
     PWM_INT cozyBreathing(Effect::Context &ctx)
     {
+        if (ctx.stepIdx != 0 && ctx.stepIdx != 12)
+            return 0;
+
+        const uint8_t BREATH_MAX_BRIGHTNESS = BREATH_MIN_BRIGHTNESS + 7;
+
         const uint32_t DYNAMIC_RANGE = BREATH_MAX_BRIGHTNESS - BREATH_MIN_BRIGHTNESS;
-        const uint8_t TOTAL_STEPS = 16;
 
         uint16_t cycleTime = ctx.dt % BREATH_CYCLE_DURATION;
         uint16_t t = ((uint32_t)cycleTime * 1023) / BREATH_CYCLE_DURATION;
@@ -129,12 +154,10 @@ namespace Effects
             }
         }
 
-        // Master Finish Check for Breathing Shutdown sequence:
-        // Terminate the effect loop ONLY on the 16th step handler after the clock hits 0.
-        if (ctx.isLightOut && ctx.dt >= BREATH_FADE_OUT_MS && ctx.stepIdx == (TOTAL_STEPS - 1))
-        {
-            ctx.effect->finish();
-        }
+        // if (ctx.isLightOut && ctx.dt >= BREATH_FADE_OUT_MS && ctx.stepIdx == (TOTAL_STEPS - 1))
+        // {
+        //     ctx.effect->finish();
+        // }
 
         return finalValue;
     }

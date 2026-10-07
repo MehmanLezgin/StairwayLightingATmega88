@@ -44,7 +44,7 @@ public:
     };
 
     enum LightAction : uint8_t {
-        LIGHT_UP, LIGHT_OFF
+        LIGHT_UP, STATE_LIGHT_OFF
     };
 
     struct Context {

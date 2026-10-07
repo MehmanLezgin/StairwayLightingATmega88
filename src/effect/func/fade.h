@@ -2,25 +2,69 @@
 
 #include "../Effect.h"
 
+#define STDBY_IDX_1 0
+#define STDBY_IDX_2 12
+#define STDBY_FADE_TIME 1500
+#define STDBY_MAX_BRIGHTNESS 12
+
 namespace Effects
 {
-    PWM_INT simpleFadeOut(Effect::Context &ctx)
+    inline bool checkStandbyBounds(Effect::Context &ctx, PWM_INT &finalValue, PWM_INT timeOverValue)
+    {
+        if (ctx.stepIdx != STDBY_IDX_1 && ctx.stepIdx != STDBY_IDX_2)
+        {
+            finalValue = 0;
+            return false;
+        }
+
+        if (ctx.dt >= STDBY_FADE_TIME)
+        {
+            ctx.effect->finish();
+            finalValue = timeOverValue;
+            return false;
+        }
+
+        return true;
+    }
+
+    PWM_INT standbyFadeOut(Effect::Context &ctx)
+    {
+        PWM_INT finalValue;
+        if (!checkStandbyBounds(ctx, finalValue, 0))
+            return finalValue;
+
+        uint32_t progress = (ctx.dt * ctx.currentValue) / STDBY_FADE_TIME;
+        return (progress >= ctx.currentValue) ? 0 : (ctx.currentValue - progress);
+    }
+
+    PWM_INT standbyFadeIn(Effect::Context &ctx)
+    {
+        PWM_INT finalValue;
+        if (!checkStandbyBounds(ctx, finalValue, STDBY_MAX_BRIGHTNESS))
+            return finalValue;
+
+        uint32_t progress = (ctx.dt * STDBY_MAX_BRIGHTNESS) / STDBY_FADE_TIME;
+        return (progress >= STDBY_MAX_BRIGHTNESS) ? STDBY_MAX_BRIGHTNESS : (PWM_INT)progress;
+    }
+
+    /*PWM_INT standbyLightFade(Effect::Context &ctx)
     {
         const uint16_t FADE_TIME = 1500;
+        const uint16_t MAX_BRIGHTNESS = 13;
 
         if (ctx.dt >= FADE_TIME)
         {
             ctx.effect->finish();
-            return 0;
+            return ctx.isLightOut ? 0 : MAX_BRIGHTNESS;
         }
 
-        uint32_t progress = (ctx.dt * ctx.currentValue) / FADE_TIME;
+        uint32_t progress = (ctx.dt * MAX_BRIGHTNESS) / FADE_TIME;
 
-        if (progress >= ctx.currentValue)
-            return 0;
+        if (progress >= MAX_BRIGHTNESS)
+            progress = MAX_BRIGHTNESS;
 
-        return ctx.currentValue - progress;
-    }
+        return ctx.isLightOut ? (MAX_BRIGHTNESS - progress) : (PWM_INT)progress;
+    }*/
 
 }
 
@@ -30,7 +74,7 @@ namespace Effects
     {
         // Adjust configuration settings here
         const uint16_t STEP_DELAY = 500; // Delay between the start of consecutive stairs (smaller = tighter wave)
-        const uint16_t FADE_TIME = 1500; // How long a single stair takes to complete its individual fade
+        const uint16_t FADE_TIME = 6000; // How long a single stair takes to complete its individual fade
 
         const uint8_t TOTAL_STEPS = STAIRS_PWM_CHANNELS;
 
@@ -103,7 +147,7 @@ namespace Effects
     }
 
 }
-
+/*
 #define BREATH_MIN_BRIGHTNESS 13
 #define BREATH_CYCLE_DURATION 7000
 #define BREATH_FADE_OUT_MS 60
@@ -162,3 +206,4 @@ namespace Effects
         return finalValue;
     }
 }
+*/

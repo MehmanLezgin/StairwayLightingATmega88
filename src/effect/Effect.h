@@ -70,7 +70,7 @@ public:
     Effect(uint8_t count);
     void start(EffectFunction fn);
     void stop();
-    void update(int8_t direction, bool isLightUp);
+    void update(int8_t direction, bool isLightOut);
     bool isRunning() const;
     void finish();
 };

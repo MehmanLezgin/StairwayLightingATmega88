@@ -2,9 +2,9 @@
 #include "effect/func/fade.h"
 #include "StairPWM.h"
 
-#define FADE_OUT_EFFECT Effects::simpleFadeOut
 #define EFFECT Effects::fade1
-#define STANDBY_EFFECT Effects::cozyBreathing
+#define EFFECT_STANDBY_FADE_IN Effects::standbyFadeIn
+#define EFFECT_STANDBY_FADE_OUT Effects::standbyFadeOut
 
 StairsLighting::StairsLighting(
     AsyncUltrasonic &lower,
@@ -21,10 +21,9 @@ StairsLighting::StairsLighting(
 
 void StairsLighting::begin()
 {
-    StairPWM::getInstance().begin(45);
+    StairPWM::getInstance().begin(30);
     _sonarLower.begin();
     _sonarUpper.begin();
-
 
     // PC0 = PCINT8
     PCMSK1 |= _BV(PCINT8 - 8);
@@ -62,7 +61,7 @@ void StairsLighting::updateEffects(uint32_t now)
 
     const int8_t dir =
         direction == Direction::DOWN ? -1 : direction == Direction::UP ? 1
-                                                                     : 0;
+                                                                       : 0;
 
     _effect.update(dir, isLightOut);
 }
@@ -84,14 +83,14 @@ void StairsLighting::enterStandby(uint32_t now)
 {
     state = State::LIGHT_STANDBY;
     _lastLightReadyTime = now;
-    _effect.start(STANDBY_EFFECT);
+    _effect.start(EFFECT_STANDBY_FADE_IN);
 }
 
 void StairsLighting::enterLightOff(uint32_t now)
 {
     state = State::LIGHT_OFF;
     _lastLightReadyTime = now;
-    _effect.start(FADE_OUT_EFFECT);
+    _effect.start(EFFECT_STANDBY_FADE_OUT);
 }
 
 void StairsLighting::updateUltrasonicSensors(bool isDark)
@@ -111,7 +110,7 @@ void StairsLighting::triggerNextSensor()
     if (now - _lastMeasureTime < MEASURE_INTERVAL_MS)
         return;
 
-    AsyncUltrasonic& sensor = nextSensor();
+    AsyncUltrasonic &sensor = nextSensor();
 
     if (!sensor.isReady())
         return;
@@ -120,17 +119,17 @@ void StairsLighting::triggerNextSensor()
         return;
 
     _lastMeasureTime = now;
-    
+
     _nextSensor = _nextSensor == SensorPos::UPPER
-        ? SensorPos::LOWER
-        : SensorPos::UPPER;
+                      ? SensorPos::LOWER
+                      : SensorPos::UPPER;
 }
 
-AsyncUltrasonic& StairsLighting::nextSensor()
+AsyncUltrasonic &StairsLighting::nextSensor()
 {
     return _nextSensor == SensorPos::UPPER
-        ? _sonarUpper
-        : _sonarLower;
+               ? _sonarUpper
+               : _sonarLower;
 }
 
 bool StairsLighting::handleLightState(

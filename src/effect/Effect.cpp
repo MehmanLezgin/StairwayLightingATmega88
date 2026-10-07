@@ -21,7 +21,7 @@ void Effect::stop()
         StairPWM::getInstance().set(i, 0);
 }
 
-void Effect::update(int8_t direction, bool isLightUp)
+void Effect::update(int8_t direction, bool isLightOut)
 {
     if (!running)
         return;
@@ -34,7 +34,7 @@ void Effect::update(int8_t direction, bool isLightUp)
         .stepIdx = 0,
         .dir = direction,
         .maxBrightness = StairPWM::getInstance().getMaxBrightness(),
-        .isLightOut = isLightUp,
+        .isLightOut = isLightOut,
         .currentValue = 0
     };
 

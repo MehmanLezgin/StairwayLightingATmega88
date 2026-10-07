@@ -24,6 +24,17 @@ void StairsLighting::begin()
     StairPWM::getInstance().begin(45);
     _sonarLower.begin();
     _sonarUpper.begin();
+
+
+    // PC0 = PCINT8
+    PCMSK1 |= _BV(PCINT8 - 8);
+
+    // PB5 = PCINT5
+    PCMSK0 |= _BV(PCINT5);
+
+    // Enable pin-change interrupt groups
+    PCICR |= _BV(PCIE1) | _BV(PCIE0);
+
     setStandbyLight(true);
 }
 

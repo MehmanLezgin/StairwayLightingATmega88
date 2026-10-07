@@ -4,10 +4,8 @@
 #include "hardware/Keyboard.h"
 #include "hardware/LdrSensor.h"
 
-
 #define PIN_KEYBOARD A6
 #define PIN_LDR A7
-
 #define LDR_THRESHOLD 100
 
 AsyncUltrasonic sonarUpper(DDRC, PORTC, PINC, PC0);

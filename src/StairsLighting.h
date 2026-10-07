@@ -96,5 +96,4 @@ public:
         bool isDark);
 
     AsyncUltrasonic& nextSensor();
-
 };

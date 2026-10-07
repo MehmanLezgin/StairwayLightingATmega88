@@ -29,97 +29,153 @@ void StairsLighting::begin()
 
 void StairsLighting::update()
 {
+    const uint32_t now = millis();
+    const bool isDark = _ldrSensor.isDark();
+
     _keyboard.update();
+    updateEffects(now);
+    updateDayNightState(now, isDark);
+    updateUltrasonicSensors(isDark);
 
-    uint32_t now = millis();
+    const Direction dir = readDirection();
 
-    const bool isLightOut = state == STATE_LIGHT_EFFECT_OUT;
-    const int8_t dir = direction == DIRECTION_DOWN ? -1 : direction == DIRECTION_UP ? +1
-                                                                                    : 0;
+    if (handleLightState(now, dir, isDark))
+        return;
 
-    bool isDark = _ldrSensor.isDark();
-
-    _effect.update(dir, isLightOut);
-
-    uint32_t stateChangetimeDiff = now - _lastLightReadyTime;
-
-    if (stateChangetimeDiff > LIGHT_UP_INTERVAL_MS >> 1)
-    {
-        if (state == STATE_LIGHT_OFF && isDark)
-        {
-            state = STATE_LIGHT_STANDBY;
-            _lastLightReadyTime = now;
-            _effect.start(STANDBY_EFFECT);
-        }
-        else if (state == STATE_LIGHT_STANDBY && !isDark)
-        {
-            state = STATE_LIGHT_OFF;
-            _lastLightReadyTime = now;
-            _effect.start(FADE_OUT_EFFECT);
-        }
-    }
-
-    if (isDark && !isMainEffectRunning())
-    {
-        _sonarLower.update();
-        _sonarUpper.update();
-        updateSensors();
-    }
-    const Direction currentDir = readDirection();
-
-    if (currentDir == DIRECTION_NONE)
-    {
-        if (state == STATE_LIGHT_ON && stateChangetimeDiff > LIGHT_STAY_TIME_MS)
-        {
-            lightOff();
-            return;
-        }
-    }
-    else if (isDark)
-    {
-        if (state == STATE_LIGHT_ON && stateChangetimeDiff > LIGHT_STAY_TIME_MS / 2)
-        {
-            _lastLightReadyTime = now;
-        }
-        else if (isStandbyOrOff() && stateChangetimeDiff >= LIGHT_UP_INTERVAL_MS)
-        {
-            lightOn(currentDir);
-            return;
-        }
-    }
-
-    if (!isMainEffectRunning())
-    {
-        if (state == STATE_LIGHT_EFFECT_IN)
-        {
-            state = STATE_LIGHT_ON;
-            _lastLightReadyTime = now;
-        }
-        else if (state == STATE_LIGHT_EFFECT_OUT)
-        {
-            state = STATE_LIGHT_OFF;
-            _lastLightReadyTime = now;
-            direction = DIRECTION_NONE;
-        }
-    }
+    finishLightEffect(now);
 }
 
-void StairsLighting::updateSensors()
+void StairsLighting::updateEffects(uint32_t now)
+{
+    const bool isLightOut = state == STATE_LIGHT_EFFECT_OUT;
+
+    const int8_t dir =
+        direction == DIRECTION_DOWN ? -1 : direction == DIRECTION_UP ? 1
+                                                                     : 0;
+
+    _effect.update(dir, isLightOut);
+}
+
+void StairsLighting::updateDayNightState(
+    uint32_t now,
+    bool isDark)
+{
+    if (now - _lastLightReadyTime <= (LIGHT_UP_INTERVAL_MS >> 1))
+        return;
+
+    if (state == STATE_LIGHT_OFF && isDark)
+        enterStandby(now);
+    else if (state == STATE_LIGHT_STANDBY && !isDark)
+        enterLightOff(now);
+}
+
+void StairsLighting::enterStandby(uint32_t now)
+{
+    state = STATE_LIGHT_STANDBY;
+    _lastLightReadyTime = now;
+    _effect.start(STANDBY_EFFECT);
+}
+
+void StairsLighting::enterLightOff(uint32_t now)
+{
+    state = STATE_LIGHT_OFF;
+    _lastLightReadyTime = now;
+    _effect.start(FADE_OUT_EFFECT);
+}
+
+void StairsLighting::updateUltrasonicSensors(bool isDark)
+{
+    if (!isDark || isMainEffectRunning())
+        return;
+
+    _sonarLower.update();
+    _sonarUpper.update();
+    triggerNextSensor();
+}
+
+void StairsLighting::triggerNextSensor()
 {
     const uint32_t now = millis();
 
     if (now - _lastMeasureTime < MEASURE_INTERVAL_MS)
         return;
 
-    AsyncUltrasonic &sensor = _sensorIndex ? _sonarLower : _sonarUpper;
+    AsyncUltrasonic& sensor = nextSensor();
 
     if (!sensor.isReady())
         return;
 
-    if (sensor.trigger())
+    if (!sensor.trigger())
+        return;
+
+    _lastMeasureTime = now;
+    
+    _nextSensor = _nextSensor == SensorPos::UPPER
+        ? SensorPos::LOWER
+        : SensorPos::UPPER;
+}
+
+AsyncUltrasonic& StairsLighting::nextSensor()
+{
+    return _nextSensor == SensorPos::UPPER
+        ? _sonarUpper
+        : _sonarLower;
+}
+
+bool StairsLighting::handleLightState(
+    uint32_t now,
+    Direction dir,
+    bool isDark)
+{
+    const uint32_t stateTime = now - _lastLightReadyTime;
+
+    if (dir == DIRECTION_NONE)
     {
-        _lastMeasureTime = now;
-        _sensorIndex ^= 1;
+        if (state == STATE_LIGHT_ON &&
+            stateTime > LIGHT_STAY_TIME_MS)
+        {
+            lightOff();
+            return true;
+        }
+
+        return false;
+    }
+
+    if (!isDark)
+        return false;
+
+    if (state == STATE_LIGHT_ON &&
+        stateTime > LIGHT_STAY_TIME_MS / 2)
+    {
+        _lastLightReadyTime = now;
+    }
+    else if (isStandbyOrOff() &&
+             stateTime >= LIGHT_UP_INTERVAL_MS)
+    {
+        lightOn(dir);
+        return true;
+    }
+
+    return false;
+}
+
+void StairsLighting::finishLightEffect(uint32_t now)
+{
+    if (isMainEffectRunning())
+        return;
+
+    if (state == STATE_LIGHT_EFFECT_IN)
+    {
+        state = STATE_LIGHT_ON;
+        _lastLightReadyTime = now;
+        return;
+    }
+
+    if (state == STATE_LIGHT_EFFECT_OUT)
+    {
+        state = STATE_LIGHT_OFF;
+        _lastLightReadyTime = now;
+        direction = DIRECTION_NONE;
     }
 }
 

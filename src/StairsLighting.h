@@ -49,7 +49,7 @@ private:
     SensorPos _nextSensor = SensorPos::UPPER;
 
     static constexpr uint32_t MEASURE_INTERVAL_MS = 100;
-    static constexpr uint16_t DETECTION_THRESHOLD_CM = 60;
+    static constexpr uint16_t DETECTION_THRESHOLD_CM = 45;
     static constexpr uint16_t LIGHT_STAY_TIME_MS = 15000;
     static constexpr uint16_t LIGHT_UP_INTERVAL_MS = 2000;
 

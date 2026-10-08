@@ -29,6 +29,8 @@ void loop()
 
 ISR(PCINT1_vect)
 {
+    PCMSK1 &= ~(1 << PCINT8);
+
     const auto state = sonarUpper.getState();
 
     if (state >= AsyncUltrasonic::WAITING_FOR_HIGH &&
@@ -36,10 +38,14 @@ ISR(PCINT1_vect)
     {
         sonarUpper.handleInterrupt();
     }
+
+    PCMSK1 |= (1 << PCINT8);
 }
 
 ISR(PCINT0_vect)
 {
+    PCMSK0 &= ~(1 << PCINT5);
+
     const auto state = sonarLower.getState();
 
     if (state >= AsyncUltrasonic::WAITING_FOR_HIGH &&
@@ -47,4 +53,6 @@ ISR(PCINT0_vect)
     {
         sonarLower.handleInterrupt();
     }
+
+    PCMSK0 |= (1 << PCINT5);
 }

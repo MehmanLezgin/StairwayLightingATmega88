@@ -25,14 +25,10 @@ void StairsLighting::begin()
     _sonarLower.begin();
     _sonarUpper.begin();
 
-    // PC0 = PCINT8
-    PCMSK1 |= _BV(PCINT8 - 8);
-
-    // PB5 = PCINT5
-    PCMSK0 |= _BV(PCINT5);
-
-    // Enable pin-change interrupt groups
-    PCICR |= _BV(PCIE1) | _BV(PCIE0);
+    
+    PCICR |= (1 << PCIE0) | (1 << PCIE1);
+    PCMSK0 |= (1 << PCINT5);
+    PCMSK1 |= (1 << PCINT8);
 
     setStandbyLight(true);
 }

@@ -42,7 +42,7 @@ private:
     State state = State::LIGHT_OFF;
 
     bool _standbyLightEnabled = false;
-    uint8_t _standbyLightBrightness = 12;
+    uint8_t _standbyLightBrightness = 1;
 
     uint32_t _lastLightReadyTime = 0;
     uint32_t _lastMeasureTime = 0;

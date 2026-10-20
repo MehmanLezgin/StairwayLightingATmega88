@@ -47,22 +47,13 @@ void StairPWM::begin(PWM_INT maxBrightness)
     Palatis::SoftPWM.begin(400);
 }
 
-uint8_t calcGamma8(uint16_t value, uint16_t maxBrightness)
-{
-    if (maxBrightness == 0) return 0;
-    
-    uint32_t gammaSquared = (uint32_t)value * value;
-    
-    return gammaSquared / maxBrightness;
-}
-
 void StairPWM::set(uint8_t channel, PWM_INT value)
 {
     if (channel >= STAIRS_PWM_CHANNELS)
         return;
 
     pwmValues[channel] = value;
-    Palatis::SoftPWM.set(channel, calcGamma8(value, StairPWM::getInstance().getMaxBrightness()));
+    Palatis::SoftPWM.set(channel, value);
 }
 
 PWM_INT StairPWM::get(uint8_t channel) const

@@ -25,7 +25,6 @@ void StairsLighting::begin()
     _sonarLower.begin();
     _sonarUpper.begin();
 
-    
     PCICR |= (1 << PCIE0) | (1 << PCIE1);
     PCMSK0 |= (1 << PCINT5);
     PCMSK1 |= (1 << PCINT8);

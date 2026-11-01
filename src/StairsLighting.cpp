@@ -77,14 +77,12 @@ void StairsLighting::updateDayNightState(
 void StairsLighting::enterStandby(uint32_t now)
 {
     state = State::LIGHT_STANDBY;
-    _lastLightReadyTime = now;
     _effect.start(EFFECT_STANDBY_FADE_IN);
 }
 
 void StairsLighting::enterLightOff(uint32_t now)
 {
     state = State::LIGHT_OFF;
-    _lastLightReadyTime = now;
     _effect.start(EFFECT_STANDBY_FADE_OUT);
 }
 
@@ -196,14 +194,14 @@ StairsLighting::Direction StairsLighting::readDirection()
 
     const uint16_t lower = _sonarLower.getDistance();
 
-    if (_sonarLower.isReady() && lower && lower < DETECTION_THRESHOLD_CM)
+    if (_sonarLower.isReady() && lower > 0 && lower < DETECTION_THRESHOLD_CM)
     {
         return Direction::UP;
     }
 
     const uint16_t upper = _sonarUpper.getDistance();
 
-    if (_sonarUpper.isReady() && upper && upper < DETECTION_THRESHOLD_CM)
+    if (_sonarUpper.isReady() && upper > 0 && upper < DETECTION_THRESHOLD_CM)
     {
         return Direction::DOWN;
     }

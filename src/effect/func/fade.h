@@ -5,7 +5,7 @@
 #define STDBY_IDX_1 0
 #define STDBY_IDX_2 12
 #define STDBY_FADE_TIME 1500
-#define STDBY_MAX_BRIGHTNESS 12
+#define STDBY_MAX_BRIGHTNESS 1
 
 namespace Effects
 {
@@ -74,12 +74,14 @@ namespace Effects
     {
         // Adjust configuration settings here
         const uint16_t STEP_DELAY = 500; // Delay between the start of consecutive stairs (smaller = tighter wave)
-        const uint16_t FADE_TIME = 6000; // How long a single stair takes to complete its individual fade
+        const uint16_t FADE_TIME = 2000; // How long a single stair takes to complete its individual fade
 
-        const uint8_t TOTAL_STEPS = STAIRS_PWM_CHANNELS;
+        const uint8_t TOTAL_STEPS = 13;
 
         // Total effect time handles the staggered starts + the final step's fade duration
-        const uint32_t TOTAL_EFFECT_DURATION = ((TOTAL_STEPS - 1) * STEP_DELAY) + FADE_TIME;
+        // Note: Since the last step runs concurrently with the second-to-last step,
+        // the total duration shifts down by 1 STEP_DELAY.
+        const uint32_t TOTAL_EFFECT_DURATION = ((TOTAL_STEPS - 2) * STEP_DELAY) + FADE_TIME;
 
         // 1. Boundary & Finish evaluation
         if (ctx.dt >= TOTAL_EFFECT_DURATION)
@@ -96,8 +98,23 @@ namespace Effects
         // Determine the physical stair step based on running direction
         uint8_t physicalStep = (ctx.dir == -1) ? (TOTAL_STEPS - 1 - ctx.stepIdx) : ctx.stepIdx;
 
-        // 2. Compute the start time for this specific step
-        uint32_t stepStartTime = physicalStep * STEP_DELAY;
+        // Synchronize step pairs dynamically relative to their physical identities
+        uint8_t delayStep = physicalStep;
+        if (delayStep == 1)
+        {
+            delayStep = 0; // Step 1 starts immediately alongside Step 0
+        }
+        else if (delayStep == TOTAL_STEPS - 1)
+        {
+            delayStep = TOTAL_STEPS - 2; // Step 12 starts alongside Step 11
+        }
+        else if (delayStep > 1)
+        {
+            delayStep = delayStep - 1; // Shift intermediate steps to close the timeline gap left by Step 1
+        }
+
+        // 2. Compute the start time for this specific step using the adjusted timeline
+        uint32_t stepStartTime = delayStep * STEP_DELAY;
 
         if (ctx.dt < stepStartTime)
         {
@@ -115,12 +132,9 @@ namespace Effects
             return targetValue;
 
         // 4. Generate high-precision Cosine S-Curve interpolation factor (0 to 1000)
-        // Formula: progress = (1 - cos(pi * localDt / FADE_TIME)) / 2
-        // Uses integer math scaling to keep execution extremely fast and fluid
         uint32_t angle = (localDt * 180) / FADE_TIME;
 
         // Fast integer approximation of: (1.0f - cosf(angle_rad)) * 500.0f
-        // Yields an exceptionally smooth acceleration and deceleration profile
         int32_t cosVal = 1000 - ((angle * angle * 2) / 65); // Basic Taylor series approach
         if (cosVal < -1000)
             cosVal = -1000;
